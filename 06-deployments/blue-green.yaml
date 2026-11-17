@@ -1,0 +1,50 @@
+# Blue/Green: two Deployments. The Service points at one color.
+# Switch traffic:
+#   kubectl patch svc myapp -p '{"spec":{"selector":{"app":"myapp","color":"green"}}}'
+# Test:
+#   kubectl run t --rm -it --image=busybox:1.36 -- wget -qO- myapp:5678
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-blue
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: myapp, color: blue }
+  template:
+    metadata:
+      labels: { app: myapp, color: blue }
+    spec:
+      containers:
+        - name: app
+          image: hashicorp/http-echo:1.0
+          args: ["-text=BLUE v1", "-listen=:5678"]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: myapp-green
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: myapp, color: green }
+  template:
+    metadata:
+      labels: { app: myapp, color: green }
+    spec:
+      containers:
+        - name: app
+          image: hashicorp/http-echo:1.0
+          args: ["-text=GREEN v2", "-listen=:5678"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: myapp
+spec:
+  selector:
+    app: myapp
+    color: blue
+  ports:
+    - port: 5678
+      targetPort: 5678

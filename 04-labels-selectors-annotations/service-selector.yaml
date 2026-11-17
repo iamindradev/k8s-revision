@@ -1,0 +1,14 @@
+# This Service selects only the prod frontend pod (web-1).
+#   kubectl get endpointslices -l kubernetes.io/service-name=shop-frontend-prod
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-frontend-prod
+spec:
+  selector:
+    app: shop
+    tier: frontend
+    env: prod
+  ports:
+    - port: 80
+      targetPort: 80

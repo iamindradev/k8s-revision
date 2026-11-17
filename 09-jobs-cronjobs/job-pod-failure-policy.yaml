@@ -1,0 +1,25 @@
+# Exit code 42 means "bad input", so fail the Job immediately without retrying.
+# Pod disruptions (node drain) don't count against backoffLimit.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: failure-policy-demo
+spec:
+  backoffLimit: 6
+  podFailurePolicy:
+    rules:
+      - action: FailJob
+        onExitCodes:
+          containerName: main
+          operator: In
+          values: [42]
+      - action: Ignore
+        onPodConditions:
+          - type: DisruptionTarget
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: main
+          image: busybox:1.36
+          command: ["sh", "-c", "echo bad input; exit 42"]

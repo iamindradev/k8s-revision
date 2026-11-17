@@ -1,0 +1,17 @@
+# Demo: a namespace that gets stuck in Terminating.
+# The ConfigMap has a finalizer that no controller will ever remove, so the namespace can't finish
+# deleting. Follow the "Try it" steps in README.md to diagnose and fix it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: stuck-demo
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: held
+  namespace: stuck-demo
+  finalizers:
+    - example.com/cleanup-that-never-happens
+data:
+  note: "I block my namespace's deletion until my finalizer is removed"

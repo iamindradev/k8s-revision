@@ -1,0 +1,71 @@
+# ADAPTER pattern
+# The legacy app writes its stats in a custom format to /shared/status.txt:
+#     requests=120 errors=3 queue=7
+# Prometheus can't read that. The adapter converts it into the standard Prometheus text format
+# and serves it on :9100/metrics. The app is unchanged, and monitoring gets a uniform interface.
+#
+#   kubectl apply -f pod-adapter.yaml
+#   kubectl exec adapter-demo -c app -- cat /shared/status.txt            # custom format
+#   kubectl port-forward pod/adapter-demo 9100:9100 &
+#   curl localhost:9100/metrics                                           # Prometheus format
+apiVersion: v1
+kind: Pod
+metadata:
+  name: adapter-demo
+  annotations:
+    prometheus.io/scrape: "true"        # Prometheus scrapes the ADAPTER, not the app
+    prometheus.io/port: "9100"
+spec:
+  volumes:
+    - name: shared
+      emptyDir: {}
+    - name: www
+      emptyDir: {}
+  containers:
+    # Main app: writes stats in its own custom format
+    - name: app
+      image: busybox:1.36
+      command: ["sh", "-c"]
+      args:
+        - |
+          r=0; e=0
+          while true; do
+            r=$((r + RANDOM % 10)); [ $((RANDOM % 5)) -eq 0 ] && e=$((e + 1))
+            echo "requests=$r errors=$e queue=$((RANDOM % 20))" > /shared/status.txt
+            sleep 5
+          done
+      volumeMounts:
+        - { name: shared, mountPath: /shared }
+    # Adapter: custom format -> Prometheus exposition format, served over HTTP
+    - name: adapter
+      image: busybox:1.36
+      command: ["sh", "-c"]
+      args:
+        - |
+          httpd -p 9100 -h /www            # serves /www/metrics in the background
+          while true; do
+            if [ -f /shared/status.txt ]; then
+              set -- $(tr ' ' '\n' < /shared/status.txt | cut -d= -f2)
+              {
+                echo "# HELP app_requests_total Total requests handled."
+                echo "# TYPE app_requests_total counter"
+                echo "app_requests_total $1"
+                echo "# HELP app_errors_total Total errors."
+                echo "# TYPE app_errors_total counter"
+                echo "app_errors_total $2"
+                echo "# HELP app_queue_length Current queue length."
+                echo "# TYPE app_queue_length gauge"
+                echo "app_queue_length $3"
+              } > /www/metrics.tmp && mv /www/metrics.tmp /www/metrics
+            fi
+            sleep 5
+          done
+      ports:
+        - name: metrics
+          containerPort: 9100
+      volumeMounts:
+        - { name: shared, mountPath: /shared, readOnly: true }
+        - { name: www, mountPath: /www }
+      resources:
+        requests: { cpu: 10m, memory: 16Mi }
+        limits: { cpu: 50m, memory: 32Mi }

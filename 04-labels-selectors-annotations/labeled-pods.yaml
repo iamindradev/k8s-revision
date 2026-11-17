@@ -1,0 +1,28 @@
+# Apply, then try:
+#   kubectl get pods -l env=prod
+#   kubectl get pods -l 'tier in (frontend,backend)' -L env,tier
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-1
+  labels: { app: shop, tier: frontend, env: prod }
+  annotations:
+    owner: "team-web"
+spec:
+  containers: [{ name: c, image: nginx:1.27 }]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-2
+  labels: { app: shop, tier: frontend, env: staging }
+spec:
+  containers: [{ name: c, image: nginx:1.27 }]
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: api-1
+  labels: { app: shop, tier: backend, env: prod }
+spec:
+  containers: [{ name: c, image: nginx:1.27 }]

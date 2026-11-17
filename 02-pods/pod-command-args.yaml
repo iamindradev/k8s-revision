@@ -1,0 +1,15 @@
+# command = Docker ENTRYPOINT, args = Docker CMD
+apiVersion: v1
+kind: Pod
+metadata:
+  name: busybox-cmd
+spec:
+  restartPolicy: Never
+  containers:
+    - name: box
+      image: busybox:1.36
+      command: ["sh", "-c"]
+      args:
+        - |
+          echo "Hello from $(hostname)";
+          for i in 1 2 3; do echo "tick $i"; sleep 1; done

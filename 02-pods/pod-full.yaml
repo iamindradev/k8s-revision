@@ -1,0 +1,61 @@
+# A pod showing the most commonly used fields.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: web-full
+  namespace: default
+  labels:
+    app: web
+    tier: frontend
+  annotations:
+    description: "Annotated example pod"
+spec:
+  restartPolicy: Always                 # Always | OnFailure | Never
+  terminationGracePeriodSeconds: 30
+  # serviceAccountName: my-sa
+  # nodeSelector:
+  #   kubernetes.io/os: linux
+  securityContext:                      # pod-level
+    runAsNonRoot: true
+    runAsUser: 101
+    fsGroup: 101
+  containers:
+    - name: web
+      image: nginxinc/nginx-unprivileged:1.27   # listens on 8080, runs as non-root
+      imagePullPolicy: IfNotPresent
+      ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+      env:
+        - name: APP_ENV
+          value: "dev"
+      resources:
+        requests:
+          cpu: "100m"         # 0.1 core, used for scheduling
+          memory: "64Mi"
+        limits:
+          cpu: "500m"         # throttled above this
+          memory: "128Mi"     # OOMKilled above this
+      readinessProbe:
+        httpGet:
+          path: /
+          port: http
+        initialDelaySeconds: 2
+        periodSeconds: 5
+      livenessProbe:
+        httpGet:
+          path: /
+          port: http
+        periodSeconds: 10
+        failureThreshold: 3
+      volumeMounts:
+        - name: cache
+          mountPath: /tmp
+      securityContext:                  # container-level
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+  volumes:
+    - name: cache
+      emptyDir: {}

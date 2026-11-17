@@ -1,0 +1,23 @@
+# Recreate strategy: all old pods are killed before new ones start (downtime).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-app
+spec:
+  replicas: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: legacy-app
+  template:
+    metadata:
+      labels:
+        app: legacy-app
+    spec:
+      containers:
+        - name: app
+          image: hashicorp/http-echo:1.0
+          args: ["-text=v1", "-listen=:5678"]
+          ports:
+            - containerPort: 5678

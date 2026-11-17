@@ -1,0 +1,31 @@
+# Blocks DELETE of any namespace labeled protected=true (built-in CEL admission, K8s 1.30+).
+#   kubectl label ns prod protected=true
+#   kubectl delete ns prod     # denied
+# To delete it on purpose, remove the label first: kubectl label ns prod protected-
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: protect-namespaces
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["DELETE"]
+        resources: ["namespaces"]
+  validations:
+    # On DELETE, "object" is null, so check oldObject (the namespace being deleted).
+    - expression: >-
+        !(has(oldObject.metadata.labels) &&
+          'protected' in oldObject.metadata.labels &&
+          oldObject.metadata.labels['protected'] == 'true')
+      message: "namespace is labeled protected=true; remove the label before deleting it"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: protect-namespaces-binding
+spec:
+  policyName: protect-namespaces
+  validationActions: [Deny]

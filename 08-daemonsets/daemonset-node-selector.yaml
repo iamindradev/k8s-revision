@@ -1,0 +1,21 @@
+# Runs only on nodes labeled disk=ssd:
+#   kubectl label node kind-worker disk=ssd
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: ssd-monitor
+spec:
+  selector:
+    matchLabels:
+      app: ssd-monitor
+  template:
+    metadata:
+      labels:
+        app: ssd-monitor
+    spec:
+      nodeSelector:
+        disk: ssd
+      containers:
+        - name: monitor
+          image: busybox:1.36
+          command: ["sh", "-c", "sleep infinity"]

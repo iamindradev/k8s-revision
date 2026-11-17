@@ -1,0 +1,18 @@
+# postStart runs right after the container starts (no ordering guarantee with ENTRYPOINT).
+# preStop runs before SIGTERM. Use it for graceful drain.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lifecycle-demo
+spec:
+  terminationGracePeriodSeconds: 20
+  containers:
+    - name: nginx
+      image: nginx:1.27
+      lifecycle:
+        postStart:
+          exec:
+            command: ["sh", "-c", "echo started > /usr/share/nginx/html/started.txt"]
+        preStop:
+          exec:
+            command: ["sh", "-c", "nginx -s quit; sleep 5"]
